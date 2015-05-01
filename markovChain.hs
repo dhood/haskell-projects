@@ -17,21 +17,21 @@ incr_count x y =
 makeTransitionMatrix :: [Int] -> (Mat.Matrix Double) 
 makeTransitionMatrix l = convertToProbs $ (size Mat.>< size) $ makeDataList count 
     where count = execState (countTransitions l) Map.empty
-          size = fst $ fst $ Map.findMax count 
+          size = fst . fst $ Map.findMax count 
 
 makeDataList :: (Map.Map (Int, Int) Int) -> [Double]
 makeDataList m = map (\x -> fromIntegral $ Map.findWithDefault 0 x m) indices
     where indices = (\n ->  [(x, y) | x <- [1..n], y <- [1..n]]) 
-                        (fst $ fst $ Map.findMax m)
+                        (fst . fst $ Map.findMax m)
 
 convertToProbs :: Mat.Matrix Double -> Mat.Matrix Double
-convertToProbs mat = mat / scaleMat
-    where
-        scaleMat = totalsVec `Mat.outer` onesVec
-            where
-                onesVec = Mat.fromList (replicate (Mat.rows mat) 1)
-                totalsVec = Mat.fromList $ reverse $ foldl no0s [] $ Mat.toList $ mat Mat.#> onesVec 
-                    where no0s xs x = if (x==0) then 1:xs else x:xs
+convertToProbs mat = 
+    let noZeros xs x = if (x==0) then 1:xs else x:xs
+        onesVec = Mat.fromList $ replicate (Mat.rows mat) 1
+        rowTotals = mat Mat.#> onesVec 
+        rowTotals_noZero = Mat.fromList . reverse . foldl noZeros [] $ Mat.toList rowTotals
+        scaleMat = rowTotals_noZero `Mat.outer` onesVec
+    in mat / scaleMat
 
 d = [1,1,1,1,1,2,2,2,2,2,2,2,5,6,5,6,5,6,5,6,5,6,5,6,5,6,5,1]
 main = do 
