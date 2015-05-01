@@ -14,18 +14,22 @@ incr_count x y =
     Map.insert x (currVal+1) y
     where currVal = Map.findWithDefault 0 x y
 
-makeTransitionMatrix :: Int -> (Map.Map (Int, Int) Int) -> (Mat.Matrix Double) 
-makeTransitionMatrix size m = (size Mat.>< size) dataList
-     where dataList = makeDataList (makeIndices 6) m
+makeTransitionMatrix :: (Map.Map (Int, Int) Int) -> (Mat.Matrix Double) 
+makeTransitionMatrix m = convertToProbs $ (size Mat.>< size) $ makeDataList m 
+    where size = fst $ fst $ Map.findMax m
 
-makeIndices :: Int -> [(Int, Int)]
-makeIndices maxVal = [(x, y) | x <- [1..maxVal], y <- [1..maxVal]]
+makeDataList :: (Map.Map (Int, Int) Int) -> [Double]
+makeDataList m = map (\x -> fromIntegral $ Map.findWithDefault 0 x m) indices
+    where indices = (\n ->  [(x, y) | x <- [1..n], y <- [1..n]]) 
+                        (fst $ fst $ Map.findMax m)
 
-makeDataList :: [(Int, Int)] -> (Map.Map (Int, Int) Int) -> [Double]
-makeDataList indices m = map (\x -> fromIntegral $ Map.findWithDefault 0 x m) indices
+convertToProbs :: Mat.Matrix Double -> Mat.Matrix Double
+convertToProbs mat = mat / scaleMat
+    where scaleMat = (mat Mat.#> onesVec) `Mat.outer` onesVec
+          onesVec = Mat.fromList (replicate (Mat.rows mat) 1)
 
+d = [1,1,1,1,1,2,2,2,2,2,2,2,5,6,5,6,5,6,5,6,5,6,5,6,5,6,5,1]
 main = do
-     let count = execState (countTransitions [1,1,1,1,1,2,2,2,2,2,2,2,5,6,5,6,5,6,5,6,5,6,5,6,5,6,5,1]) Map.empty
-         transMat = makeTransitionMatrix 6 count
-         l = makeDataList (makeIndices 6) count
-          in Mat.disp 3 transMat
+     let count = execState (countTransitions d) Map.empty
+         transMat = makeTransitionMatrix count
+          in Mat.disp 3 $ transMat
