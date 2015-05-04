@@ -3,6 +3,8 @@ import qualified Data.Map as Map
 import qualified Numeric.LinearAlgebra.HMatrix as Mat
 import Data.List
 import System.IO
+import Data.Char
+import Data.List.Split as Split
 
 data TransitionMatrix t = 
                    TransitionMatrix { mat :: Mat.Matrix Double, states :: [t] }
@@ -52,15 +54,19 @@ predict transMat p_n k = do
         sump = p_nplusk Mat.<> (cols Mat.>< 1) (replicate cols 1)
         in p_nplusk / sump
 
---d = [1,1,1,1,1,2,2,2,2,2,2,2,5,6,5,6,5,6,5,6,5,6,5,6,5,6,5,1]
-d = words "rain shine rain shine clouds rain"
-k = 30 
+tokenize::String -> [String]
+tokenize s = filter (\x -> x /= " " && x /= "") $
+             Split.split rule $ map toLower s
+        where rule = Split.dropDelims $ oneOf ":., \n" -- get rid of delimeters
+        --where rule = Split.whenElt (\x -> isSeparator x || isPunctuation x || x == '\n') -- keep
+
+k = 2 
 main = do
     dataset <- readFile "data.txt"
     let 
-        transMat = makeTransitionMatrix $ words dataset
+        transMat = makeTransitionMatrix $ tokenize dataset
         numStates = length (states transMat)
         p_0 = (1 Mat.>< numStates) (1.0:replicate (numStates-1) 0.0)
         p_k = predict (mat transMat) p_0 k
-          in print transMat --Mat.disp 3 p_k --print transMat
+          in Mat.disp 3 p_k --print transMat
 
