@@ -1,3 +1,4 @@
+{-# LANGUAGE NoMonomorphismRestriction #-}
 import Control.Monad.State.Lazy
 import qualified Data.Map as Map
 import qualified Numeric.LinearAlgebra.HMatrix as Mat
@@ -10,7 +11,7 @@ data TransitionMatrix t =
                    TransitionMatrix { mat :: Mat.Matrix Double, states :: [t] }
 instance (Show t) => Show (TransitionMatrix t) where 
     show (TransitionMatrix mat states) = "States: " ++ show states ++ "\n" 
-                                        ++ show mat
+                                        ++ Mat.disps 3 mat
 
 countTransitions :: (Eq t, Ord t) => [t] -> State (Map.Map (t, t) Int) [t]
 countTransitions [x] = return []
@@ -60,7 +61,7 @@ tokenize s = filter (\x -> x /= " " && x /= "") $
         where rule = Split.dropDelims $ oneOf ":., \n" -- get rid of delimeters
         --where rule = Split.whenElt (\x -> isSeparator x || isPunctuation x || x == '\n') -- keep
 
-k = 2 
+k = 2
 main = do
     dataset <- readFile "data.txt"
     let 
@@ -68,5 +69,6 @@ main = do
         numStates = length (states transMat)
         p_0 = (1 Mat.>< numStates) (1.0:replicate (numStates-1) 0.0)
         p_k = predict (mat transMat) p_0 k
-          in Mat.disp 3 p_k --print transMat
+    print (states transMat)
+    Mat.disp 3 p_k 
 
