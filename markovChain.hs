@@ -15,14 +15,13 @@ incr_count x y =
     where currVal = Map.findWithDefault 0 x y
 
 makeTransitionMatrix :: [Int] -> (Mat.Matrix Double) 
-makeTransitionMatrix l = convertToProbs $ (size Mat.>< size) $ makeDataList count 
+makeTransitionMatrix l = convertToProbs $ (size Mat.>< size) $ makeDataList count size 
     where count = execState (countTransitions l) Map.empty
-          size = fst . fst $ Map.findMax count 
+          size = maximum l
 
-makeDataList :: (Map.Map (Int, Int) Int) -> [Double]
-makeDataList m = map (\x -> fromIntegral $ Map.findWithDefault 0 x m) indices
-    where indices = (\n ->  [(x, y) | x <- [1..n], y <- [1..n]]) 
-                        (fst . fst $ Map.findMax m)
+makeDataList :: (Map.Map (Int, Int) Int) -> Int -> [Double]
+makeDataList m n = map (\x -> fromIntegral $ Map.findWithDefault 0 x m) indices
+    where indices = [(x, y) | x <- [1..n], y <- [1..n]]
 
 convertToProbs :: Mat.Matrix Double -> Mat.Matrix Double
 convertToProbs mat = 
@@ -33,7 +32,20 @@ convertToProbs mat =
         scaleMat = rowTotals_noZero `Mat.outer` onesVec
     in mat / scaleMat
 
+predict :: Mat.Matrix Double -> Mat.Matrix Double -> Int -> Mat.Matrix Double
+predict transMat p_n 0 = p_n
+predict transMat p_n k = do
+    let p_nplusk = transMat Mat.<> predict transMat p_n (k-1)
+        rows = Mat.rows p_nplusk
+        sump = (1 Mat.>< rows) (replicate rows 1) Mat.<> p_nplusk 
+        in p_nplusk / sump
+
 d = [1,1,1,1,1,2,2,2,2,2,2,2,5,6,5,6,5,6,5,6,5,6,5,6,5,6,5,1]
+k = 5
 main = do 
     let transMat = makeTransitionMatrix d
-          in Mat.disp 3 $ transMat
+        p_0 = (6 Mat.>< 1) (1: replicate 5 0)
+        p_k = predict transMat p_0 k
+          in Mat.disp 3 p_k 
+
+
