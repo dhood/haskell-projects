@@ -2,6 +2,7 @@ import Control.Monad.State.Lazy
 import qualified Data.Map as Map
 import qualified Numeric.LinearAlgebra.HMatrix as Mat
 import Data.List
+import System.IO
 
 data TransitionMatrix t = 
                    TransitionMatrix { mat :: Mat.Matrix Double, states :: [t] }
@@ -54,10 +55,12 @@ predict transMat p_n k = do
 --d = [1,1,1,1,1,2,2,2,2,2,2,2,5,6,5,6,5,6,5,6,5,6,5,6,5,6,5,1]
 d = words "rain shine rain shine clouds rain"
 k = 30 
-main = do 
-    let transMat = makeTransitionMatrix d
+main = do
+    dataset <- readFile "data.txt"
+    let 
+        transMat = makeTransitionMatrix $ words dataset
         numStates = length (states transMat)
         p_0 = (1 Mat.>< numStates) (1.0:replicate (numStates-1) 0.0)
         p_k = predict (mat transMat) p_0 k
-          in Mat.disp 3 p_k --print transMat
+          in print transMat --Mat.disp 3 p_k --print transMat
 
