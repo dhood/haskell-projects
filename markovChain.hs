@@ -57,11 +57,12 @@ predict transMat p_n k = do
 tokenize :: String -> [String]
 tokenize s = filter (\x -> x /= " " && x /= "") $
              Split.split rule $ map toLower s
-        where rule = Split.dropDelims $ oneOf ":., \n" -- get rid of delimeters
+        where rule = Split.dropDelims $ oneOf ":., \n[]();\"" -- get rid of delimeters
         --where rule = Split.whenElt (\x -> isSeparator x || isPunctuation x || x == '\n') -- keep
 
 makeInitialProbs :: (Eq t, Ord t) => (Map.Map t Double) -> [t] -> [Double]
 makeInitialProbs _ [] = []
+makeInitialProbs emptyMap states | Map.null emptyMap = replicate (length states) 1.0 
 makeInitialProbs inits (state:states) = 
             (Map.findWithDefault 0 state inits):(makeInitialProbs inits states)
         
