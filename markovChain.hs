@@ -6,6 +6,7 @@ import Data.List
 import System.IO
 import Data.Char
 import Data.List.Split as Split
+import Data.Maybe
 
 data TransitionMatrix t = 
                    TransitionMatrix { mat :: Mat.Matrix Double, states :: [t] }
@@ -51,23 +52,34 @@ predict :: Mat.Matrix Double -> Mat.Matrix Double -> Int -> Mat.Matrix Double
 predict transMat p_n 0 = p_n
 predict transMat p_n k = do
     let p_nplusk = (predict transMat p_n (k-1)) Mat.<> transMat
-        cols = Mat.cols p_nplusk
-        sump = p_nplusk Mat.<> (cols Mat.>< 1) (replicate cols 1)
-        in p_nplusk / sump
+        in normaliseRowVec p_nplusk
 
-tokenize::String -> [String]
+tokenize :: String -> [String]
 tokenize s = filter (\x -> x /= " " && x /= "") $
              Split.split rule $ map toLower s
         where rule = Split.dropDelims $ oneOf ":., \n" -- get rid of delimeters
         --where rule = Split.whenElt (\x -> isSeparator x || isPunctuation x || x == '\n') -- keep
 
+makeInitialProbs :: (Eq t, Ord t) => (Map.Map t Double) -> [t] -> [Double]
+makeInitialProbs _ [] = []
+makeInitialProbs inits (state:states) = 
+            (Map.findWithDefault 0 state inits):(makeInitialProbs inits states)
+        
+normaliseRowVec :: Mat.Matrix Double -> Mat.Matrix Double
+normaliseRowVec x = do
+        let cols = Mat.cols x 
+            sum = x Mat.<> (cols Mat.>< 1) (replicate cols 1)
+            in x / sum
+
 k = 2
+initialProbs = [("be", 1),("to",0.5)]
 main = do
     dataset <- readFile "data.txt"
     let 
         transMat = makeTransitionMatrix $ tokenize dataset
         numStates = length (states transMat)
-        p_0 = (1 Mat.>< numStates) (1.0:replicate (numStates-1) 0.0)
+        p_0 = normaliseRowVec $ (1 Mat.>< numStates) $
+              makeInitialProbs (Map.fromList initialProbs) (states transMat)
         p_k = predict (mat transMat) p_0 k
     print (states transMat)
     Mat.disp 3 p_k 
